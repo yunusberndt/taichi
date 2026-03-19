@@ -15,7 +15,7 @@ def _taichi_basis_matrix(family, x, x_length, num_basis_functions, use_orth_weig
     raise NotImplementedError("Taichi basis matrix implementation is not wired yet.")
 
 
-def _test_basis_functions(dt, family, num_basis_functions, use_orth_weight):
+def _test_basis_matrices(dt, family, num_basis_functions, use_orth_weight):
     tol = 1e-5 if dt == ti.f32 else 1e-12
     np_dt = np.float32 if dt == ti.f32 else np.float64
 
@@ -51,8 +51,8 @@ def _test_basis_functions(dt, family, num_basis_functions, use_orth_weight):
 )
 @pytest.mark.parametrize("num_basis_functions", [1, 2, 4, 7, 10])
 @test_utils.test(default_fp=ti.f32, fast_math=False)
-def test_basis_functions_f32(family, use_orth_weight, num_basis_functions):
-    _test_basis_functions(ti.f32, family, num_basis_functions, use_orth_weight)
+def test_basis_matrices_f32(family, use_orth_weight, num_basis_functions):
+    _test_basis_matrices(ti.f32, family, num_basis_functions, use_orth_weight)
 
 
 @pytest.mark.parametrize(
@@ -71,5 +71,5 @@ def test_basis_functions_f32(family, use_orth_weight, num_basis_functions):
 )
 @pytest.mark.parametrize("num_basis_functions", [1, 2, 4, 7, 10])
 @test_utils.test(require=ti.extension.data64, default_fp=ti.f64, fast_math=False)
-def test_basis_functions_f64(family, use_orth_weight, num_basis_functions):
-    _test_basis_functions(ti.f64, family, num_basis_functions, use_orth_weight)
+def test_basis_matrices_f64(family, use_orth_weight, num_basis_functions):
+    _test_basis_matrices(ti.f64, family, num_basis_functions, use_orth_weight)

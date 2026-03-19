@@ -1,7 +1,7 @@
 
 import numpy as np
 
-# Imports/Code to evaluate basis functions series for a defined set of coefficients
+# Imports/Code to evaluate basis functions *series* for a defined set of coefficients
 from numpy.polynomial.laguerre import lagval
 from numpy.polynomial.hermite import hermval
 from numpy.polynomial.legendre import legval
@@ -35,7 +35,7 @@ def fourier_evaluate(x, coeffs):
 
 
 
-# Code to evaluate (weighted) basis function matrices
+# Code to evaluate (weighted) basis function *matrices*
 def laguerre(x, x_length, num_basis_functions, use_orth_weight):
     """
     Compute a set of Laguerre polynomials with custom weight.
