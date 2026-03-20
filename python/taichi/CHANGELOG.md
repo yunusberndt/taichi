@@ -1,10 +1,11 @@
 Highlights:
-   - Fix Vulkan API version fallback: try 1.1 before 1.0 for AMD GPU compatibility (by **Yunus Berndt**)
-   - Refine Vulkan device creation and update build configuration (by **Yunus Berndt**)
-   - Better checks if vulkan SDK already exists (by **Yunus Berndt**)
-   - Vulkan patch for 8bit,16bit storage and 8 Bit arithmetic (by **Yunus Berndt**)
 
 Full changelog:
+   - Pseudeo Vandermonde matrices and series fully implemented for different bases. Tests ran successfully. (by **Yunus Berndt**)
+   - WIP on polynomial.py matrix functions. (by **Yunus Berndt**)
+   - Taichi polynomial vals added to series test suite. (by **Yunus Berndt**)
+   - Implemented chebval, lagval, legval, polyval, fourierval in Taichi match module. (by **Yunus Berndt**)
+   - Created Test suites for basis function matrices and series. Numpy vs. Taichi. Taichi are hooks for now. (by **Yunus Berndt**)
    - [pre-commit.ci] auto fixes from pre-commit.com hooks (by **pre-commit-ci[bot]**)
    - changelog messages (by **Yunus Berndt**)
    - Remove debug statements from vulkan_device_creator.cpp (by **Yunus Berndt**)
