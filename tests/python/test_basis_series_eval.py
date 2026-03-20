@@ -5,12 +5,12 @@ from types import SimpleNamespace
 import numpy as np
 from numpy.polynomial import (
     chebval as np_chebval,
-    fourierval as np_fourierval,
     hermval as np_hermval,
     lagval as np_lagval,
     legval as np_legval,
     polyval as np_polyval,
 )
+from basis_functions_ref import fourier_evaluate as np_fourval
 
 import taichi as ti
 from taichi.math.polynomial import (
@@ -19,7 +19,7 @@ from taichi.math.polynomial import (
     chebval as ti_chebval,
     legval as ti_legval,
     polyval as ti_polyval,
-    fourierval as ti_fourierval,
+    fourval as ti_fourval,
 )
 
 
@@ -29,7 +29,7 @@ np_series_eval = SimpleNamespace(
     legendre=np_legval,
     chebyshev=np_chebval,
     monomial=np_polyval,
-    fourier=np_fourierval,
+    fourier=np_fourval,
 )
 
 ti_series_eval = SimpleNamespace(
@@ -38,7 +38,7 @@ ti_series_eval = SimpleNamespace(
     legendre=ti_legval,
     chebyshev=ti_chebval,
     monomial=ti_polyval,
-    fourier=ti_fourierval,
+    fourier=ti_fourval,
 )
 
 
