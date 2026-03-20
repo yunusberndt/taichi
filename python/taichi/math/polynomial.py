@@ -3,7 +3,9 @@ Math polynomial module.
 """
 from taichi.lang.kernel_impl import func
 from taichi.types import template
-from taichi.lang.ops import (cos, sin, exp)
+from taichi.lang.ops import (cos, sin, exp, sqrt)
+from taichi.lang.impl import static
+
 
 @func
 def lagval(x_field: template(), c_field: template()):
@@ -321,7 +323,7 @@ def fourval(x_field: template(), c_field: template()):
 
 
 @func
-def lagmatrix(x_field: template(), use_orth_weight: bool, matrix_field: template()):
+def lagmatrix(x_field: template(), use_orth_weight: template(), matrix_field: template()):
     """
     Build a Laguerre pseudo-Vandermonde matrix in-place.
 
@@ -352,36 +354,30 @@ def lagmatrix(x_field: template(), use_orth_weight: bool, matrix_field: template
     """
     
     for i in range(matrix_field.shape[0]):
-        if use_orth_weight:
-            l0 = exp(-0.5 * x_field[i])
-            l1 = l0 * (1.0 - x_field[i])
+        if static(use_orth_weight):
+            matrix_field[i, 0] = exp(-0.5 * x_field[i])
+            matrix_field[i, 1] = matrix_field[i, 0] * (1.0 - x_field[i])
         else:
-            l0 = 1.0
-            l1 = 1.0 - x_field[i]
-
-        matrix_field[i, 0] = l0
-        matrix_field[i, 1] = l1
+           matrix_field[i, 0] = 1.0
+           matrix_field[i, 1] = 1.0 - x_field[i]
 
         for j in range(2, matrix_field.shape[1]):
-            lj = ((2 * j - 1 - x_field[i]) * l1 - (j - 1) * l0) / j
-            matrix_field[i, j] = lj
-            l0 = l1
-            l1 = lj
+            matrix_field[i, j] = ((2 * j - 1 - x_field[i]) *  matrix_field[i, j-1] - (j - 1) * matrix_field[i, j-2]) / j
 
     return matrix_field
 
 @func
-def hermmatrix(x_field: template(), use_orth_weight: bool, matrix_field: template()):
+def hermmatrix(x_field: template(), use_orth_weight: template(), matrix_field: template()):
     """
     Build a Hermite pseudo-Vandermonde matrix in-place.
 
     For each input sample ``x_field[i]`` and degree ``j``, this writes
 
     .. math::
-        \\text{matrix\\_field}[i, j] = w(x_i) L_j(x_i), \\quad 0 \\le j \\le deg,
+        \\text{matrix\\_field}[i, j] = w(x_i) H_j(x_i), \\quad 0 \\le j \\le deg,
 
     where ``deg = matrix_field.shape[1] - 1``,
-    ``w(x) = exp(-x/2)`` when ``use_orth_weight`` is ``True``, and
+    ``w(x) = exp(-x^2/2)`` when ``use_orth_weight`` is ``True``, and
     ``w(x) = 1`` otherwise.
 
     Parameters
@@ -389,34 +385,180 @@ def hermmatrix(x_field: template(), use_orth_weight: bool, matrix_field: templat
     x_field : template
         1D input container of ``x`` values.
     use_orth_weight : bool
-        If ``True``, apply the Laguerre orthogonality weight ``exp(-x/2)``.
+        If ``True``, apply the Hermite root-weight ``exp(-x^2/2)``.
     matrix_field : template
         2D output container written in-place. Row count should match
         ``x_field.shape[0]``. This implementation assumes at least 2 columns.
-        Reason: column 0 is the trivial base term (``w(x)`` or ``1``).
 
     Returns
     -------
     template
         The same container as ``matrix_field`` after in-place update.
     """
-    
     for i in range(matrix_field.shape[0]):
-        if use_orth_weight:
-            l0 = exp(-0.5 * x_field[i])
-            l1 = l0 * (1.0 - x_field[i])
-        else:
-            l0 = 1.0
-            l1 = 1.0 - x_field[i]
-
-        matrix_field[i, 0] = l0
-        matrix_field[i, 1] = l1
+        matrix_field[i, 0] = exp(-0.5 * x_field[i] * x_field[i]) if static(use_orth_weight) else 1.0
+        matrix_field[i, 1] = matrix_field[i, 0] * (2.0 * x_field[i])
 
         for j in range(2, matrix_field.shape[1]):
-            lj = ((2 * j - 1 - x_field[i]) * l1 - (j - 1) * l0) / j
-            matrix_field[i, j] = lj
-            l0 = l1
-            l1 = lj
+            matrix_field[i, j] = matrix_field[i, j-1] * (2.0 * x_field[i]) - matrix_field[i, j-2] * (2 * (j - 1))
+
+    return matrix_field
+
+@func
+def chebmatrix(x_field: template(), use_orth_weight: template(), matrix_field: template()):
+    """
+    Build a Chebyshev pseudo-Vandermonde matrix in-place.
+
+    For each input sample ``x_field[i]`` and degree ``j``, this writes
+
+    .. math::
+        \\text{matrix\\_field}[i, j] = w(x_i) T_j(x_i), \\quad 0 \\le j \\le deg,
+
+    where ``deg = matrix_field.shape[1] - 1``,
+    ``w(x) = (1 - x^2)^(-1/4)`` when ``use_orth_weight`` is ``True``, and
+    ``w(x) = 1`` otherwise.
+
+    Parameters
+    ----------
+    x_field : template
+        1D input container of ``x`` values.
+    use_orth_weight : template
+        If ``True``, apply the Chebyshev orthogonality weight
+        ``(1 - x^2)^(-1/4)``.
+    matrix_field : template
+        2D output container written in-place. Row count should match
+        ``x_field.shape[0]``. This implementation assumes at least 2 columns.
+
+    Returns
+    -------
+    template
+        The same container as ``matrix_field`` after in-place update.
+    """
+    for i in range(matrix_field.shape[0]):
+        if static(use_orth_weight):
+            matrix_field[i, 0] = 1.0 / sqrt(sqrt(1.0 - x_field[i] * x_field[i]))
+            matrix_field[i, 1] = matrix_field[i, 0] * x_field[i]
+        else:
+            matrix_field[i, 0] = 1.0
+            matrix_field[i, 1] = x_field[i]
+
+        for j in range(2, matrix_field.shape[1]):
+            matrix_field[i, j] = matrix_field[i, j - 1] * (2.0 * x_field[i]) - matrix_field[i, j - 2]
+
+    return matrix_field
+
+@func
+def legmatrix(x_field: template(), matrix_field: template()):
+    """
+    Build a Legendre pseudo-Vandermonde matrix in-place.
+
+    For each input sample ``x_field[i]`` and degree ``j``, this writes
+
+    .. math::
+        \\text{matrix\\_field}[i, j] = P_j(x_i), \\quad 0 \\le j \\le deg,
+
+    where ``deg = matrix_field.shape[1] - 1``.
+
+    Parameters
+    ----------
+    x_field : template
+        1D input container of ``x`` values.
+    matrix_field : template
+        2D output container written in-place. Row count should match
+        ``x_field.shape[0]``. This implementation assumes at least 2 columns.
+
+    Returns
+    -------
+    template
+        The same container as ``matrix_field`` after in-place update.
+    """
+    for i in range(matrix_field.shape[0]):
+        matrix_field[i, 0] = 1.0
+        matrix_field[i, 1] = x_field[i]
+
+        for j in range(2, matrix_field.shape[1]):
+            matrix_field[i, j] = (
+                matrix_field[i, j - 1] * x_field[i] * (2 * j - 1)
+                - matrix_field[i, j - 2] * (j - 1)
+            ) / j
+
+    return matrix_field
+
+@func
+def polymatrix(x_field: template(), matrix_field: template()):
+    """
+    Build a power-basis Vandermonde matrix in-place.
+
+    For each input sample ``x_field[i]`` and degree ``j``, this writes
+
+    .. math::
+        \\text{matrix\\_field}[i, j] = x_i^j, \\quad 0 \\le j \\le deg,
+
+    where ``deg = matrix_field.shape[1] - 1``.
+
+    Parameters
+    ----------
+    x_field : template
+        1D input container of ``x`` values.
+    matrix_field : template
+        2D output container written in-place. Row count should match
+        ``x_field.shape[0]``. This implementation assumes at least 2 columns.
+
+    Returns
+    -------
+    template
+        The same container as ``matrix_field`` after in-place update.
+    """
+    for i in range(matrix_field.shape[0]):
+        matrix_field[i, 0] = 1.0
+        matrix_field[i, 1] = x_field[i]
+
+        for j in range(2, matrix_field.shape[1]):
+            matrix_field[i, j] = matrix_field[i, j - 1] * x_field[i]
+
+    return matrix_field
+
+@func
+def fourmatrix(x_field: template(), matrix_field: template()):
+    """
+    Build a trigonometric design matrix in-place (Fourier basis).
+
+    Column order matches ``fourval`` coefficients:
+    ``[c0, cos(1*x), sin(1*x), cos(2*x), sin(2*x), ...]``,
+    with the constant term represented as ``0.5 * c0``.
+
+    Parameters
+    ----------
+    x_field : template
+        1D input container of ``x`` values.
+    matrix_field : template
+        2D output container written in-place. Row count should match
+        ``x_field.shape[0]``.
+
+    Returns
+    -------
+    template
+        The same container as ``matrix_field`` after in-place update.
+    """
+    for i in range(matrix_field.shape[0]):
+        matrix_field[i, 0] = 0.5
+
+        if matrix_field.shape[1] > 1:
+            matrix_field[i, 1] = cos(x_field[i])
+
+        if matrix_field.shape[1] > 2:
+            matrix_field[i, 2] = sin(x_field[i])
+
+        for k in range(2, matrix_field.shape[1] // 2 + 1):
+            matrix_field[i, 2 * k - 1] = (
+                matrix_field[i, 2 * k - 3] * matrix_field[i, 1]
+                - matrix_field[i, 2 * k - 2] * matrix_field[i, 2]
+            )
+            if 2 * k < matrix_field.shape[1]:
+                matrix_field[i, 2 * k] = (
+                    matrix_field[i, 2 * k - 2] * matrix_field[i, 1]
+                    + matrix_field[i, 2 * k - 3] * matrix_field[i, 2]
+                )
 
     return matrix_field
 
@@ -424,12 +566,4 @@ def hermmatrix(x_field: template(), use_orth_weight: bool, matrix_field: templat
 
 
 
-
-
-
-
-
-
-
-
-__all__ = ["lagval", "hermval", "chebval", "legval", "polyval", "fourval", "lagmatrix"]
+__all__ = ["lagval", "hermval", "chebval", "legval", "polyval", "fourval", "lagmatrix", "hermmatrix", "chebmatrix", "legmatrix", "polymatrix", "fourmatrix"]

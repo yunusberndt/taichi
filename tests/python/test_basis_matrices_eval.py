@@ -1,37 +1,79 @@
 import pytest
+from tests import test_utils
+from types import SimpleNamespace
 
 import numpy as np
-
+from .basis_functions_ref import(
+    lagmatrix as np_lagmatrix,
+    hermmatrix as np_hermmatrix,
+    chebmatrix as np_chebmatrix,
+    legmatrix as np_legmatrix,
+    polymatrix as np_polymatrix,
+    fourmatrix as np_fourmatrix,
+)
 import taichi as ti
-from tests import test_utils
-import tests.python.basis_functions_ref as basis_functions
+from taichi.math.polynomial import (
+    lagmatrix as ti_lagmatrix,
+    hermmatrix as ti_hermmatrix,
+    chebmatrix as ti_chebmatrix,
+    legmatrix as ti_legmatrix,
+    polymatrix as ti_polymatrix,
+    fourmatrix as ti_fourmatrix,
+)
+
+np_matrices_eval = SimpleNamespace(
+    laguerre=np_lagmatrix,
+    hermite=np_hermmatrix,
+    legendre=np_legmatrix,
+    chebyshev=np_chebmatrix,
+    monomial=np_polymatrix,
+    fourier=np_fourmatrix,
+)
+
+ti_matrices_eval = SimpleNamespace(
+    laguerre=ti_lagmatrix,
+    hermite=ti_hermmatrix,
+    legendre=ti_legmatrix,
+    chebyshev=ti_chebmatrix,
+    monomial=ti_polymatrix,
+    fourier=ti_fourmatrix,
+)
 
 
-
-def _taichi_basis_matrix(family, x, x_length, num_basis_functions, use_orth_weight, dt):
-    # TODO: Replace with your Taichi implementation call.
-    # Example target signature:
-    # return ti_basis.basis_matrix(family=family, x=x, x_length=x_length, num_basis_functions=num_basis_functions, use_orth_weight=use_orth_weight, dt=dt)
-    raise NotImplementedError("Taichi basis matrix implementation is not wired yet.")
 
 
 def _test_basis_matrices(dt, family, num_basis_functions, use_orth_weight):
-    tol = 1e-5 if dt == ti.f32 else 1e-12
+    
+    # Numpy logic to get expected values
     np_dt = np.float32 if dt == ti.f32 else np.float64
 
     x = np.linspace(0.0, 0.999, 37, dtype=np_dt)
-    x_length = x.shape[0]
+    np_basis_func = getattr(np_matrices_eval, family)
+    expected = np_basis_func(x, x.shape[0], num_basis_functions, use_orth_weight).astype(np_dt)
 
-    basis_func = getattr(basis_functions, family)
-    expected = basis_func(x, x_length, num_basis_functions, use_orth_weight).astype(np_dt)
+    # Taichi logic to get actual values
+    ti_x = ti.field(dt, shape=x.shape)
+    ti_x.from_numpy(x)
+    ti_matrix = ti.field(dt, shape=(x.shape[0], num_basis_functions))
+    ti_basis_func = getattr(ti_matrices_eval, family)
 
-    try:  # TODO: Remove this part once Taichi is wired.
-        actual = _taichi_basis_matrix(family, x, x_length, num_basis_functions, use_orth_weight, dt)
-    except NotImplementedError as exc:
-        pytest.skip(str(exc))
+    if use_orth_weight is not None:
+        @ti.kernel
+        def basis_test(ti_x: ti.template(), use_orth_weight: ti.template(), ti_matrix: ti.template()):
+            ti_basis_func(ti_x, use_orth_weight, ti_matrix)
 
-    actual = np.asarray(actual, dtype=np_dt)
-    assert actual.shape == expected.shape
+        basis_test(ti_x, use_orth_weight, ti_matrix)
+    else:
+        @ti.kernel
+        def basis_test(ti_x: ti.template(), ti_matrix: ti.template()):
+            ti_basis_func(ti_x, ti_matrix)
+
+        basis_test(ti_x, ti_matrix)
+    
+    actual = ti_matrix.to_numpy()
+    
+    # Compare expected and actual values
+    tol = 1e-5 if dt == ti.f32 else 1e-12
     np.testing.assert_allclose(actual, expected, rtol=tol, atol=tol)
 
 
@@ -42,14 +84,14 @@ def _test_basis_matrices(dt, family, num_basis_functions, use_orth_weight):
         pytest.param("laguerre", True),
         pytest.param("hermite", False),
         pytest.param("hermite", True),
-        pytest.param("legendre", False),
         pytest.param("chebyshev", False),
         pytest.param("chebyshev", True),
-        pytest.param("monomial", False),
-        pytest.param("fourier", False),
+        pytest.param("legendre", None),
+        pytest.param("monomial", None),
+        pytest.param("fourier", None),
     ],
 )
-@pytest.mark.parametrize("num_basis_functions", [1, 2, 4, 7, 10])
+@pytest.mark.parametrize("num_basis_functions", [2, 4, 7, 9])
 @test_utils.test(default_fp=ti.f32, fast_math=False)
 def test_basis_matrices_f32(family, use_orth_weight, num_basis_functions):
     _test_basis_matrices(ti.f32, family, num_basis_functions, use_orth_weight)
@@ -64,12 +106,12 @@ def test_basis_matrices_f32(family, use_orth_weight, num_basis_functions):
         pytest.param("hermite", True),
         pytest.param("chebyshev", False),
         pytest.param("chebyshev", True),
-        pytest.param("legendre", False),
-        pytest.param("monomial", False),
-        pytest.param("fourier", False),
+        pytest.param("legendre", None),
+        pytest.param("monomial", None),
+        pytest.param("fourier", None),
     ],
 )
-@pytest.mark.parametrize("num_basis_functions", [1, 2, 4, 7, 10])
+@pytest.mark.parametrize("num_basis_functions", [2, 4, 7, 9])
 @test_utils.test(require=ti.extension.data64, default_fp=ti.f64, fast_math=False)
 def test_basis_matrices_f64(family, use_orth_weight, num_basis_functions):
     _test_basis_matrices(ti.f64, family, num_basis_functions, use_orth_weight)

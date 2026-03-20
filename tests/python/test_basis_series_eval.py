@@ -3,16 +3,14 @@ from tests import test_utils
 from types import SimpleNamespace
 
 import numpy as np
-from numpy.polynomial import (
-    chebval as np_chebval,
-    hermval as np_hermval,
-    lagval as np_lagval,
-    legval as np_legval,
-    polyval as np_polyval,
-)
-from basis_functions_ref import fourier_evaluate as np_fourval
+from numpy.polynomial.chebyshev import chebval as np_chebval
+from numpy.polynomial.hermite import hermval as np_hermval
+from numpy.polynomial.laguerre import lagval as np_lagval
+from numpy.polynomial.legendre import legval as np_legval
+from numpy.polynomial.polynomial import polyval as np_polyval
 
 import taichi as ti
+from .basis_functions_ref import fourval as np_fourval
 from taichi.math.polynomial import (
     lagval as ti_lagval,
     hermval as ti_hermval,
@@ -44,7 +42,6 @@ ti_series_eval = SimpleNamespace(
 
 
 def _test_basis_series_eval(dt, family, degree):
-    tol = 1e-5 if dt == ti.f32 else 1e-12
     
     # Numpy logic to get expected values
     np_dt = np.float32 if dt == ti.f32 else np.float64
@@ -69,19 +66,19 @@ def _test_basis_series_eval(dt, family, degree):
     actual = ti_x.to_numpy()
 
     # Compare expected and actual values
+    tol = 1e-5 if dt == ti.f32 else 1e-12
     np.testing.assert_allclose(np.asarray(actual, dtype=np_dt), expected, rtol=tol, atol=tol)
 
 
-@pytest.mark.parametrize("family", ["laguerre", "hermite", "legendre", "chebyshev", "monomial", "fourier"])
+@pytest.mark.parametrize("family", ["laguerre", "hermite", "chebyshev", "legendre", "monomial", "fourier"])
 @pytest.mark.parametrize("degree", [0, 1, 2, 4, 7, 10])
 @test_utils.test(default_fp=ti.f32, fast_math=False)
 def test_basis_series_eval_f32(family, degree):
     _test_basis_series_eval(ti.f32, family, degree)
 
 
-@pytest.mark.parametrize("family", ["laguerre", "hermite", "legendre", "chebyshev", "monomial", "fourier"])
+@pytest.mark.parametrize("family", ["laguerre", "hermite", "chebyshev", "legendre", "monomial", "fourier"])
 @pytest.mark.parametrize("degree", [0, 1, 2, 4, 7, 10])
 @test_utils.test(require=ti.extension.data64, default_fp=ti.f64, fast_math=False)
 def test_basis_series_eval_f64(family, degree):
     _test_basis_series_eval(ti.f64, family, degree)
-

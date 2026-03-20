@@ -4,10 +4,10 @@ import numpy as np
 # Imports/Code to evaluate basis functions *series* for a defined set of coefficients
 from numpy.polynomial.laguerre import lagval
 from numpy.polynomial.hermite import hermval
-from numpy.polynomial.legendre import legval
 from numpy.polynomial.chebyshev import chebval
+from numpy.polynomial.legendre import legval
 
-def fourier_evaluate(x, coeffs):
+def fourval(x, coeffs):
     """
     Evaluate the Fourier series of a given set of coefficients.
 
@@ -36,7 +36,7 @@ def fourier_evaluate(x, coeffs):
 
 
 # Code to evaluate (weighted) basis function *matrices*
-def laguerre(x, x_length, num_basis_functions, use_orth_weight):
+def lagmatrix(x, x_length, num_basis_functions, use_orth_weight):
     """
     Compute a set of Laguerre polynomials with custom weight.
 
@@ -55,41 +55,7 @@ def laguerre(x, x_length, num_basis_functions, use_orth_weight):
         L[:, i] = weight * lagval(x, [0] * i + [1])  # Evaluate Laguerre polynomial i. If I remove np.exp(-x/2) * then I get the same Laguerre polynomials as QuantLib.
     return L
 
-def monomial(x, x_length, num_basis_functions, _):
-    """
-    Compute a set of monomials.
-
-    Parameters:
-    x: array-like - Input values (stock prices or other variables)
-    num_basis_functions: int - Degree of the Laguerre polynomial to compute
-
-    Returns:
-    array - Laguerre basis functions evaluated at x
-    """
-    L = np.zeros((x_length, num_basis_functions))  # Create an array for the basis functions
-    for i in range(num_basis_functions):
-        L[:, i] =  x**i  
-    return L
-
-def legendre(x, x_length, num_basis_functions, _):
-    """
-    Compute a set of Legendre polynomials.
-
-    Parameters:
-    x: array-like - Input values (stock prices or other variables)
-    num_basis_functions: int - Degree of the Laguerre polynomial to compute
-
-    Returns:
-    array - Laguerre basis functions evaluated at x
-    """
-    L = np.zeros((x_length, num_basis_functions))  # Create an array for the basis functions
-    for i in range(num_basis_functions):
-        L[:, i] =  legval(x, [0] * i + [1])  
-    return L
-
-
-
-def hermite(x, x_length, num_basis_functions, use_orth_weight):
+def hermmatrix(x, x_length, num_basis_functions, use_orth_weight):
     """
     Compute a set of Hermite polynomials with custom weight.
 
@@ -108,8 +74,58 @@ def hermite(x, x_length, num_basis_functions, use_orth_weight):
         L[:, i] =  weight * hermval(x, [0] * i + [1])  # Evaluate Laguerre polynomial i. If I remove np.exp(-x/2) * then I get the same Laguerre polynomials as QuantLib.
     return L
 
+def chebmatrix(x, x_length, num_basis_functions, use_orth_weight):
+    """
+    Compute a set of Chebyshev polynomials with custom weight.
 
-def fourier(x, x_length, num_basis_functions, _):
+    Parameters:
+    x: array-like - Input values (stock prices or other variables)
+    x_length: int - Length of the input array
+    num_basis_functions: int - Degree of the Laguerre polynomial to compute
+    use_orth_weight: bool - Whether to use the orthogonality weight
+
+    Returns:
+    array - Laguerre basis functions evaluated at x
+    """
+    weight = 1 if not use_orth_weight else (1-x**2)**(-1/4)
+    L = np.zeros((x_length, num_basis_functions))  # Create an array for the basis functions
+    for i in range(num_basis_functions):
+        L[:, i] =  weight * chebval(x, [0] * i + [1])  # Evaluate Laguerre polynomial i. If I remove np.exp(-x/2) * then I get the same Laguerre polynomials as QuantLib.
+    return L
+
+def legmatrix(x, x_length, num_basis_functions, _):
+    """
+    Compute a set of Legendre polynomials.
+
+    Parameters:
+    x: array-like - Input values (stock prices or other variables)
+    num_basis_functions: int - Degree of the Laguerre polynomial to compute
+
+    Returns:
+    array - Laguerre basis functions evaluated at x
+    """
+    L = np.zeros((x_length, num_basis_functions))  # Create an array for the basis functions
+    for i in range(num_basis_functions):
+        L[:, i] =  legval(x, [0] * i + [1])  
+    return L
+
+def polymatrix(x, x_length, num_basis_functions, _):
+    """
+    Compute a set of monomials.
+
+    Parameters:
+    x: array-like - Input values (stock prices or other variables)
+    num_basis_functions: int - Degree of the Laguerre polynomial to compute
+
+    Returns:
+    array - Laguerre basis functions evaluated at x
+    """
+    L = np.zeros((x_length, num_basis_functions))  # Create an array for the basis functions
+    for i in range(num_basis_functions):
+        L[:, i] =  x**i  
+    return L
+
+def fourmatrix(x, x_length, num_basis_functions, _):
     """
     Construct the first `num_basis_functions` Fourier basis functions sampled at x:
 
@@ -147,28 +163,7 @@ def fourier(x, x_length, num_basis_functions, _):
 
     # Subsequent basis: cos/sin pairs
     for i in range(1, num_basis_functions):
-        F[:, i] = fourier_evaluate(x,  [0] * i + [1])
+        F[:, i] = fourval(x,  [0] * i + [1])
 
     return F
-
-    
-def chebyshev(x, x_length, num_basis_functions, use_orth_weight):
-    """
-    Compute a set of Chebyshev polynomials with custom weight.
-
-    Parameters:
-    x: array-like - Input values (stock prices or other variables)
-    x_length: int - Length of the input array
-    num_basis_functions: int - Degree of the Laguerre polynomial to compute
-    use_orth_weight: bool - Whether to use the orthogonality weight
-
-    Returns:
-    array - Laguerre basis functions evaluated at x
-    """
-    weight = 1 if not use_orth_weight else (1-x**2)**(-1/4)
-    L = np.zeros((x_length, num_basis_functions))  # Create an array for the basis functions
-    for i in range(num_basis_functions):
-        L[:, i] =  weight * chebval(x, [0] * i + [1])  # Evaluate Laguerre polynomial i. If I remove np.exp(-x/2) * then I get the same Laguerre polynomials as QuantLib.
-    return L
-
 

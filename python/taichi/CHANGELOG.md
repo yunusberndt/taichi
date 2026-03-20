@@ -5,6 +5,9 @@ Highlights:
    - Vulkan patch for 8bit,16bit storage and 8 Bit arithmetic (by **Yunus Berndt**)
 
 Full changelog:
+   - [pre-commit.ci] auto fixes from pre-commit.com hooks (by **pre-commit-ci[bot]**)
+   - changelog messages (by **Yunus Berndt**)
+   - Remove debug statements from vulkan_device_creator.cpp (by **Yunus Berndt**)
    - Add debug output to check VK_KHR_SHADER_FLOAT16_INT8 at both instance and device levels (by **Yunus Berndt**)
    - Fix Vulkan API version fallback: try 1.1 before 1.0 for AMD GPU compatibility (by **Yunus Berndt**)
    - Add debug output for Vulkan instance creation and API version fallback (by **Yunus Berndt**)
