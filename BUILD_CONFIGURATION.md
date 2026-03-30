@@ -15,6 +15,20 @@ $env:TAICHI_CMAKE_ARGS = "-DTI_WITH_OPENGL=ON -DTI_WITH_VULKAN=ON -DTI_WITH_DX11
 cmd /c 'call "%ProgramFiles(x86)%\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" amd64 -vcvars_ver=14.34 && python build.py wheel --tag-local v174.granular16bit --python native --permissive'
 ```
 
+## **Linux Wheel (cp312)**
+Run this in a Linux environment (native Linux or WSL2 Ubuntu), from repo root:
+
+```bash
+export TAICHI_CMAKE_ARGS="-DTI_WITH_OPENGL=ON -DTI_WITH_VULKAN=ON -DTI_WITH_DX11=OFF -DTI_WITH_DX12=OFF -DTI_BUILD_TESTS=ON -DTI_WITH_C_API=ON"
+python3 build.py wheel --tag-local v174.granular16bit --python 3.12 --permissive
+```
+
+Expected output pattern:
+
+```text
+dist/taichi-1.8.0+v174.granular16bit-cp312-cp312-manylinux_2_27_x86_64.whl
+```
+
 ## **Required Visual Studio Components:**
 - **Desktop development with C++** workload
 - **MSVC v143 - VS 2022 C++ x64/x86 build tools (Latest) - 14.34** (non-Spectre-mitigated)

@@ -37,14 +37,18 @@ def build_wheel(python: Command, pip: Command) -> None:
     proj_tags = []
     extra = []
 
-    # Explicitly set flags to match official Windows release build EXACTLY
-    # This matches .github/workflows/release.yml lines 238-244
+    # Keep backend flags explicit and platform-aware.
+    # DX backends are Windows-only and must stay disabled elsewhere.
     cmake_args["TI_WITH_OPENGL"] = True
     cmake_args["TI_WITH_VULKAN"] = True
-    cmake_args["TI_WITH_DX11"] = True
-    cmake_args["TI_WITH_DX12"] = True
     cmake_args["TI_BUILD_TESTS"] = True
     cmake_args["TI_WITH_C_API"] = True
+    if platform.system() == "Windows":
+        cmake_args["TI_WITH_DX11"] = True
+        cmake_args["TI_WITH_DX12"] = True
+    else:
+        cmake_args["TI_WITH_DX11"] = False
+        cmake_args["TI_WITH_DX12"] = False
 
     # NOTE: Official release does NOT include:
     # - TI_WITH_GGUI=ON (this adds IMM32.dll dependency)
