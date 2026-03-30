@@ -29,6 +29,25 @@ Expected output pattern:
 dist/taichi-1.8.0+v174.granular16bit-cp312-cp312-manylinux_2_27_x86_64.whl
 ```
 
+### Linux (Conda Clang / headless HPC)
+
+When building with **conda-forge Clang** and the bundled **GLFW** sources, `external/glfw/src/posix_time.c` may fail with undeclared `clock_gettime`, `CLOCK_REALTIME`, or `CLOCK_MONOTONIC` (strict C99 + sysroot headers do not expose those without an explicit POSIX feature macro). Set this **before** `python build.py ...` (and after `conda activate`):
+
+```bash
+export CFLAGS="${CFLAGS:+$CFLAGS }-D_POSIX_C_SOURCE=200809L"
+export CPPFLAGS="${CPPFLAGS:+$CPPFLAGS }-D_POSIX_C_SOURCE=200809L"
+```
+
+`-D_GNU_SOURCE` is a broader alternative if you already rely on it for other targets.
+
+If you change compiler flags or conda packages, remove the stale CMake tree and rebuild:
+
+```bash
+rm -rf _skbuild
+```
+
+For GUI-related backends on a node **without** system X11/GL development packages, install the matching **xorg-** headers/libs from **conda-forge** (e.g. `xorg-libx11`, `xorg-libxcursor`, extensions as CMake reports missing includes) and keep **one** toolchain coherent—avoid mixing `CPATH`/`CMAKE_PREFIX_PATH` to conda with host `/usr/include` in the same build.
+
 ## **Required Visual Studio Components:**
 - **Desktop development with C++** workload
 - **MSVC v143 - VS 2022 C++ x64/x86 build tools (Latest) - 14.34** (non-Spectre-mitigated)
