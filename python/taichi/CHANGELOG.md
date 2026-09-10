@@ -1,6 +1,12 @@
 Highlights:
+   - **Language and syntax**
+      - Export polynomial APIs in taichi.math (by **Yunus Berndt**)
 
 Full changelog:
+   - Enhance build configuration for Linux and Windows: added Linux wheel build instructions and made backend flags platform-aware in the build script. (by **Yunus Berndt**)
+   - [Lang] Export polynomial APIs in taichi.math (by **Yunus Berndt**)
+   - Changelog updates. (by **Yunus Berndt**)
+   - Build config fixes: setup.py clean compat, setuptools pin, venv build env (by **Yunus Berndt**)
    - Pseudeo Vandermonde matrices and series fully implemented for different bases. Tests ran successfully. (by **Yunus Berndt**)
    - WIP on polynomial.py matrix functions. (by **Yunus Berndt**)
    - Taichi polynomial vals added to series test suite. (by **Yunus Berndt**)
