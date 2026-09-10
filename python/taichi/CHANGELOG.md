@@ -3,6 +3,9 @@ Highlights:
       - Export polynomial APIs in taichi.math (by **Yunus Berndt**)
 
 Full changelog:
+   - Merge branch 'ti-math-build-config' of https://github.com/yunusberndt/taichi into ti-math-build-config (by **Yunus Berndt**)
+   - [spirv] Align place SNodes to their primitive size (by **Yunus Berndt**)
+   - Added info re Linux build configs on headless nodes. (by **yunusberndt**)
    - Enhance build configuration for Linux and Windows: added Linux wheel build instructions and made backend flags platform-aware in the build script. (by **Yunus Berndt**)
    - [Lang] Export polynomial APIs in taichi.math (by **Yunus Berndt**)
    - Changelog updates. (by **Yunus Berndt**)
