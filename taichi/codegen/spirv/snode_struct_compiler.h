@@ -30,6 +30,15 @@ struct SNodeDescriptor {
   // starts at a fixed offset in its parent cell's memory.
   size_t mem_offset_in_parent_cell = 0;
 
+  // Alignment (bytes) this SNode's memory must start at. For a place SNode this
+  // is the natural alignment of its primitive type; for a container it is the
+  // strictest alignment among its children. Buffer accesses index the root
+  // buffer as an array of the accessed primitive (see `at_buffer` in
+  // spirv_codegen.cpp), so a place SNode whose absolute offset is not a
+  // multiple of its primitive size would be addressed at a truncated offset and
+  // silently alias the field placed before it.
+  size_t alignment = 1;
+
   SNode *get_child(int ch_i) const {
     return snode->ch[ch_i].get();
   }

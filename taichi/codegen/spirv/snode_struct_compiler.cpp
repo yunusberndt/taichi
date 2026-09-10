@@ -1,8 +1,33 @@
 #include "taichi/codegen/spirv/snode_struct_compiler.h"
 
+#include <algorithm>
+
 namespace taichi::lang {
 namespace spirv {
 namespace {
+
+// Buffer accesses index the root buffer as an array of the accessed primitive:
+// `at_buffer` in spirv_codegen.cpp turns a byte offset into an element index
+// with a right shift by log2(sizeof(primitive)). That shift truncates, so a
+// place SNode sitting at an offset that is not a multiple of its primitive size
+// would be read and written one slot too low, aliasing the last element of the
+// field placed before it. The two helpers below keep every place SNode on its
+// natural boundary, at a cost of at most `alignment - 1` padding bytes per
+// field.
+inline std::size_t primitive_alignment(std::size_t size_bytes) {
+  // Largest power of two not exceeding |size_bytes|, capped at 8 bytes, which
+  // is the widest primitive we emit array views for.
+  std::size_t alignment = 1;
+  while (alignment * 2 <= size_bytes && alignment < 8) {
+    alignment *= 2;
+  }
+  return alignment;
+}
+
+inline std::size_t align_up(std::size_t offset, std::size_t alignment) {
+  // |alignment| is always a power of two here.
+  return (offset + alignment - 1) & ~(alignment - 1);
+}
 
 class StructCompiler {
  public:
@@ -70,6 +95,7 @@ class StructCompiler {
     if (is_place) {
       sn_desc.cell_stride = data_type_size(sn->dt);
       sn_desc.container_stride = sn_desc.cell_stride;
+      sn_desc.alignment = primitive_alignment(sn_desc.cell_stride);
     } else {
       // Sort by size, so that smaller subfields are placed first.
       // This accelerates Nvidia's GLSL compiler, as the compiler tries to
@@ -87,16 +113,26 @@ class StructCompiler {
           });
 
       std::size_t cell_stride = 0;
+      std::size_t cell_alignment = 1;
       for (auto &[snode_size, i] : element_strides) {
         auto &ch = sn->ch[i];
-        auto child_offset = cell_stride;
         auto *ch_snode = ch.get();
+        const std::size_t ch_alignment =
+            snode_descriptors_.find(ch_snode->id)->second.alignment;
+        cell_alignment = std::max(cell_alignment, ch_alignment);
+        cell_stride = align_up(cell_stride, ch_alignment);
+        auto child_offset = cell_stride;
         cell_stride += snode_size;
         snode_descriptors_.find(ch_snode->id)
             ->second.mem_offset_in_parent_cell = child_offset;
         ch_snode->offset_bytes_in_parent_cell = child_offset;
       }
+      // Cells of a container sit back to back, so the stride itself has to
+      // preserve the alignment of the strictest child; otherwise only cell 0
+      // would be aligned.
+      cell_stride = align_up(cell_stride, cell_alignment);
       sn_desc.cell_stride = cell_stride;
+      sn_desc.alignment = cell_alignment;
 
       if (sn->type == SNodeType::bitmasked) {
         size_t num_cells = sn_desc.snode->num_cells_per_container;
