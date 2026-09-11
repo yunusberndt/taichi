@@ -56,7 +56,15 @@ if [ "${V:-0}" -ge 16 ]; then
       && tar xf clang+llvm-15.0.7-x86_64-linux-gnu-ubuntu-18.04.tar.xz)
     [ -x "$BC15/bin/clang" ] && BCCLANG="$BC15/bin/clang"
   fi
-  if [ -n "$BCCLANG" ]; then EXTRA="$EXTRA -DCLANG_EXECUTABLE=$BCCLANG"
+  # -DCLANG_EXECUTABLE in TAICHI_CMAKE_ARGS does NOT work: ti_build overwrites it after parsing,
+  # in .github/workflows/scripts/ti_build/compiler.py -> cmake_args["CLANG_EXECUTABLE"] = clang,
+  # using the first `clang` on PATH. So shadow `clang` on PATH instead. Use a one-entry directory
+  # rather than $BC15/bin, to avoid putting all of LLVM 15's binaries ahead of the conda toolchain.
+  if [ -n "$BCCLANG" ]; then
+    mkdir -p "$HOME/.cache/ti-build-cache/bc15bin"
+    ln -sf "$BCCLANG" "$HOME/.cache/ti-build-cache/bc15bin/clang"
+    export PATH="$HOME/.cache/ti-build-cache/bc15bin:$PATH"
+    clang --version | head -1                                     # must report 15.x
   else echo "WARNING: no clang <= 15 for bitcode; CUDA/CPU backends will abort at ti.init()"; fi
   # X11 headers for GLFW: xorgproto supplies X11/X.h (libx11 alone only ships Xlib.h).
   # Batch install first; if a name is absent in this channel snapshot, retry one-by-one so a
