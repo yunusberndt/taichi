@@ -45,15 +45,18 @@ if [ "${V:-0}" -ge 16 ]; then
   # Vulkan is unaffected, so this does NOT show up as a build failure - only at runtime.
   # conda-forge no longer carries clang 15, and taichi's llvm15 bundle ships no clang, so fall
   # back to upstream LLVM's own binaries (~1 GB, cached; no root required).
-  BC15="$HOME/.cache/ti-build-cache/clang+llvm-15.0.7-x86_64-linux-gnu-ubuntu-18.04"
+  # 15.0.6, not 15.0.7: upstream published no x86_64 Linux build for 15.0.7.
+  BC15="$HOME/.cache/ti-build-cache/clang+llvm-15.0.6-x86_64-linux-gnu-ubuntu-18.04"
   BCCLANG=""
   for c in "$HOME/.cache/ti-build-cache/llvm15/bin/clang" "$BC15/bin/clang" /usr/bin/clang-15; do
     [ -x "$c" ] && BCCLANG="$c" && break
   done
   if [ -z "$BCCLANG" ]; then
+    # -f: without it curl "succeeds" on an HTTP error page and leaves a bogus archive behind
     (cd "$HOME/.cache/ti-build-cache" \
-      && curl -LO https://github.com/llvm/llvm-project/releases/download/llvmorg-15.0.7/clang+llvm-15.0.7-x86_64-linux-gnu-ubuntu-18.04.tar.xz \
-      && tar xf clang+llvm-15.0.7-x86_64-linux-gnu-ubuntu-18.04.tar.xz)
+      && curl -fL -O https://github.com/llvm/llvm-project/releases/download/llvmorg-15.0.6/clang+llvm-15.0.6-x86_64-linux-gnu-ubuntu-18.04.tar.xz \
+      && tar xf clang+llvm-15.0.6-x86_64-linux-gnu-ubuntu-18.04.tar.xz) \
+      || echo "LLVM 15 download/extract FAILED"
     [ -x "$BC15/bin/clang" ] && BCCLANG="$BC15/bin/clang"
   fi
   # -DCLANG_EXECUTABLE in TAICHI_CMAKE_ARGS does NOT work: ti_build overwrites it after parsing,
