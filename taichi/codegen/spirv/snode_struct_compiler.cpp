@@ -24,6 +24,18 @@ inline std::size_t primitive_alignment(std::size_t size_bytes) {
   return alignment;
 }
 
+// Fields directly under the root are streamed by whole thread-groups, and a group
+// whose span begins part-way into a cache line needs one memory request more than one
+// that begins on a boundary -- so where a field starts changes its cost at identical
+// generated code. Placing every top-level field on a line boundary removes that, for at
+// most kRootFieldAlignment-1 padding bytes per field. 128 rather than 64 because Nvidia
+// and Apple use 128-byte lines; 64 would cover x86, Intel and AMD.
+//
+// Root only. Applying it in primitive_alignment() instead would pad every ELEMENT of a
+// container to a line: an f32 field would occupy 64 bytes per element, 16x its size,
+// and every element would land on its own line.
+constexpr std::size_t kRootFieldAlignment = 128;
+
 inline std::size_t align_up(std::size_t offset, std::size_t alignment) {
   // |alignment| is always a power of two here.
   return (offset + alignment - 1) & ~(alignment - 1);
@@ -112,13 +124,16 @@ class StructCompiler {
             return a.first < b.first;
           });
 
+      const bool at_root = sn->type == SNodeType::root;
       std::size_t cell_stride = 0;
       std::size_t cell_alignment = 1;
       for (auto &[snode_size, i] : element_strides) {
         auto &ch = sn->ch[i];
         auto *ch_snode = ch.get();
-        const std::size_t ch_alignment =
+        const std::size_t own_alignment =
             snode_descriptors_.find(ch_snode->id)->second.alignment;
+        const std::size_t ch_alignment =
+            at_root ? std::max(own_alignment, kRootFieldAlignment) : own_alignment;
         cell_alignment = std::max(cell_alignment, ch_alignment);
         cell_stride = align_up(cell_stride, ch_alignment);
         auto child_offset = cell_stride;
