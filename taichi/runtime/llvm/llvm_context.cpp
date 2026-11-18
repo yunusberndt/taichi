@@ -432,6 +432,12 @@ std::unique_ptr<llvm::Module> TaichiLLVMContext::module_from_file(
       patch_intrinsic("block_dim", Intrinsic::nvvm_read_ptx_sreg_ntid_x);
       patch_intrinsic("grid_dim", Intrinsic::nvvm_read_ptx_sreg_nctaid_x);
       patch_intrinsic("block_barrier", Intrinsic::nvvm_barrier0, false);
+      // Until it is inlined the barrier is a call to this wrapper, and without
+      // the convergent mark SimplifyCFG may copy it into both sides of a branch
+      // on the thread index, so threads of one warp wait at different barriers
+      // and the block deadlocks
+      module->getFunction("block_barrier")
+          ->addFnAttr(llvm::Attribute::Convergent);
       patch_intrinsic("block_barrier_and_i32", Intrinsic::nvvm_barrier0_and);
       patch_intrinsic("block_barrier_or_i32", Intrinsic::nvvm_barrier0_or);
       patch_intrinsic("block_barrier_count_i32", Intrinsic::nvvm_barrier0_popc);
